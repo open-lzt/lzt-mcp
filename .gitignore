@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+_MODULE.md
+_MODULE_AUTO.md
+.plans/
+*.egg-info/
