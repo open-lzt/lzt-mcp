@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Literal
 
-from pylzt.methods.base import BaseMethod
 from pydantic import BaseModel
+from pylzt.methods.base import BaseMethod
 
 from lzt_dev_mcp.catalog.errors_catalog import KNOWN_HTTP_STATUS
 from lzt_dev_mcp.catalog.models import collect_response_models

@@ -24,9 +24,9 @@ dev = [
 ]
 
 [tool.uv.sources]
-# Local path dependency during dev — sibling repo on this machine.
+# Sibling ecosystem repos pulled from git so a fresh clone / CI resolves them (no local path).
 pylzt = { git = "https://github.com/open-lzt/pylzt.git", branch = "main" }
-lzt-testnet = { path = "../testnet", editable = true }
+lzt-testnet = { git = "https://github.com/open-lzt/lzt-testnet.git", branch = "main" }
 
 [build-system]
 requires = ["hatchling"]

@@ -52,9 +52,7 @@ def testnet_base_url() -> Iterator[str]:
 
 
 @pytest.fixture
-def _testnet_settings(
-    testnet_base_url: str, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def _testnet_settings(testnet_base_url: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """Point mcp's Settings at the live testnet for the duration of the test."""
     monkeypatch.setenv("LZT_DEV_MCP_TESTNET_BASE_URL", testnet_base_url)
     # send_request builds Settings() itself; the env var above is what it reads.
