@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from pylzt.config import ClientConfig
 
 from lzt_dev_mcp.config import Settings
 from lzt_dev_mcp.errors import ProdBlocked, TestnetUnavailable
@@ -27,13 +28,18 @@ def test_testnet_without_configured_url_is_unavailable() -> None:
         build_client("testnet", None, settings)
 
 
-def test_prod_with_real_token_returns_client_with_no_base_url_override() -> None:
+def test_prod_with_real_token_keeps_the_real_hosts() -> None:
     settings = Settings()
     client = build_client("prod", "realtoken", settings)
-    assert client is not None
+    default = ClientConfig()
+    assert client.config.base_url == default.base_url
+    assert client.config.forum_base_url == default.forum_base_url
 
 
-def test_testnet_with_configured_url_returns_client() -> None:
+def test_testnet_with_configured_url_overrides_both_hosts() -> None:
+    """Both hosts, not just `base_url` — a forum-scoped method with only the market host
+    overridden goes to the real prod forum and comes back 401, which reads as a testnet bug."""
     settings = Settings(testnet_base_url="http://127.0.0.1:9000")
     client = build_client("testnet", None, settings)
-    assert client is not None
+    assert client.config.base_url == "http://127.0.0.1:9000"
+    assert client.config.forum_base_url == "http://127.0.0.1:9000"
