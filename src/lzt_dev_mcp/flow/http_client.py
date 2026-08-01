@@ -40,6 +40,14 @@ from lzt_dev_mcp.flow.dtos import (
 __all__ = ["FlowHttpClient"]
 
 
+def _dynamic_param_from_wire(body: dict[str, Any]) -> DynamicMethodParamResponse:
+    """Named fields, not `**body` — an added upstream key would otherwise raise an unexpected-kwarg
+    TypeError instead of the KeyError every other reconstruction here fails with."""
+    return DynamicMethodParamResponse(
+        name=body["name"], type_str=body["type_str"], required=body["required"]
+    )
+
+
 def _input_spec_from_wire(body: dict[str, Any]) -> InputSpec:
     return InputSpec(literal=body.get("literal"), ref=body.get("ref"))
 
@@ -164,7 +172,7 @@ class FlowHttpClient:
         return [
             DynamicMethodResponse(
                 name=item["name"],
-                params=[DynamicMethodParamResponse(**p) for p in item["params"]],
+                params=[_dynamic_param_from_wire(p) for p in item["params"]],
             )
             for item in body
         ]
@@ -173,7 +181,7 @@ class FlowHttpClient:
         body = await self._request("GET", f"/catalog/dynamic_methods/{facade}/{method}")
         return DynamicMethodDetailResponse(
             name=body["name"],
-            params=[DynamicMethodParamResponse(**p) for p in body["params"]],
+            params=[_dynamic_param_from_wire(p) for p in body["params"]],
             returns=body["returns"],
         )
 

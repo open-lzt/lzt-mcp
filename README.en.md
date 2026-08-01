@@ -20,7 +20,8 @@ uv sync --extra dev
 scripts/run.sh          # stdio transport — the default an MCP client expects
 ```
 
-`pylzt` is a local path dependency (`../aiolzt` relative to this repo) during development.
+`pylzt` and `lzt-testnet` come in as git dependencies (`tool.uv.sources` in `pyproject.toml`) —
+`uv sync` pulls the `main` branch of both repos.
 
 Register it with an MCP client (Claude Code, Claude Desktop, etc.):
 
@@ -30,7 +31,7 @@ Register it with an MCP client (Claude Code, Claude Desktop, etc.):
     "lzt-dev-mcp": {
       "command": "uv",
       "args": ["run", "python", "-m", "lzt_dev_mcp"],
-      "cwd": "C:/Users/User/Desktop/lzt-mcp"
+      "cwd": "/absolute/path/to/lzt-mcp"
     }
   }
 }
@@ -56,7 +57,6 @@ Env prefix `LZT_DEV_MCP_` (see `.env.example`):
 | `LZT_FLOW_API_KEY` | unset | Auth for the `lzt-flow` REST API, if it requires one |
 | `LZT_EVENTUS_BASE_URL` | `http://127.0.0.1:8001` | The `lzt-eventus` REST API Group D talks to |
 | `LZT_EVENTUS_ADMIN_API_KEY` | unset | Admin key for `lzt-eventus`'s `/subscriptions`, `/tokens`, `/events` routes |
-| `ALLOW_PROD` | unset | Informational only — does **not** bypass the per-call token requirement above |
 
 ## Examples
 

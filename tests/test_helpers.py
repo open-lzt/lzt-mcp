@@ -32,9 +32,9 @@ async def test_get_testnet_status_unreachable_when_unconfigured() -> None:
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_get_testnet_status_reachable_against_live_instance() -> None:
-    import os
-
-    os.environ["LZT_DEV_MCP_TESTNET_BASE_URL"] = "http://127.0.0.1:8765"
+async def test_get_testnet_status_reachable_against_live_instance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LZT_DEV_MCP_TESTNET_BASE_URL", "http://127.0.0.1:8765")
     status = await get_testnet_status()
     assert status.reachable is True
