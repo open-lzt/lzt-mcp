@@ -23,8 +23,8 @@ uv sync --extra dev
 scripts/run.sh          # транспорт stdio — вариант по умолчанию, которого ждёт MCP-клиент
 ```
 
-`pylzt` во время разработки подключён как локальная path-зависимость (`../aiolzt`
-относительно этого репозитория).
+`pylzt` и `lzt-testnet` подтягиваются как git-зависимости (`tool.uv.sources` в `pyproject.toml`) —
+`uv sync` тянет ветку `main` обоих репозиториев.
 
 Зарегистрируйте сервер в MCP-клиенте (Claude Code, Claude Desktop и т. д.):
 
@@ -34,7 +34,7 @@ scripts/run.sh          # транспорт stdio — вариант по ум�
     "lzt-dev-mcp": {
       "command": "uv",
       "args": ["run", "python", "-m", "lzt_dev_mcp"],
-      "cwd": "C:/Users/User/Desktop/lzt-mcp"
+      "cwd": "/absolute/path/to/lzt-mcp"
     }
   }
 }
@@ -60,7 +60,6 @@ scripts/run.sh          # транспорт stdio — вариант по ум�
 | `LZT_FLOW_API_KEY` | не задана | Авторизация для REST API `lzt-flow`, если он её требует |
 | `LZT_EVENTUS_BASE_URL` | `http://127.0.0.1:8001` | REST API `lzt-eventus`, с которым работает группа D |
 | `LZT_EVENTUS_ADMIN_API_KEY` | не задана | Админ-ключ для маршрутов `lzt-eventus`: `/subscriptions`, `/tokens`, `/events` |
-| `ALLOW_PROD` | не задана | Только информационная — **не** обходит требование токена на каждый вызов из пункта выше |
 
 ## Примеры
 

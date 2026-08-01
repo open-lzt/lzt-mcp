@@ -13,4 +13,6 @@ class Settings(BaseSettings):
     lzt_flow_api_key: str | None = None
     lzt_eventus_base_url: str = "http://127.0.0.1:27543"
     lzt_eventus_admin_api_key: str | None = None
-    allow_prod: bool = False
+    # There is deliberately no `allow_prod` setting: the prod gate is the caller supplying a token
+    # to `build_client`, and an env flag beside it would be a second, weaker answer to the same
+    # question — one that reads as the gate while the token check is what actually decides.
