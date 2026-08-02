@@ -9,7 +9,7 @@ uv sync --extra dev
 scripts/run.sh
 ```
 
-[AI-agent docs](docs/for_ai/index.md) — module map and invariants, read before the source.
+[AI-agent docs](docs/for_ai/index.en.md) — module map and invariants, read before the source.
 
 ## Install
 
