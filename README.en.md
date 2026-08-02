@@ -1,34 +1,32 @@
 <p align="right"><b>English</b> · <a href="README.md">Русский</a></p>
 
-# lzt-dev-mcp
+# lzt-mcp
 
-**MCP server giving an AI dev-agent 29 tools for working on the `lolzteam`/`lzt.market`
-ecosystem** — send/test raw API requests (testnet by default, prod hard-guarded), manage
-`lzt-flow` scenarios over its REST API, manage `lzt-eventus` subscriptions/token-accounts/events,
-and introspect the API surface without grepping source.
-
-[AI-agent docs](docs/for_ai/index.en.md) — module map + invariants, read this before the source.
-
-> Private repo, part of the lolzteam-ecosystem sibling set (`pylzt`, `lzt-eventus`,
-> `lzt-flow`, `lzt-testnet`, `lzt-dev-mcp`). No secrets committed — a prod token, if ever used,
-> is passed per call and never stored.
-
-## Quickstart
+An MCP server for the `lolzteam`/`lzt.market` ecosystem: test API requests (testnet by default, prod blocked without an explicit token), drive `lzt-flow` flows, manage `lzt-eventus` subscriptions and events.
 
 ```bash
 uv sync --extra dev
-scripts/run.sh          # stdio transport — the default an MCP client expects
+scripts/run.sh
 ```
 
-`pylzt` and `lzt-testnet` come in as git dependencies (`tool.uv.sources` in `pyproject.toml`) —
-`uv sync` pulls the `main` branch of both repos.
+[AI-agent docs](docs/for_ai/index.md) — module map and invariants, read before the source.
 
-Register it with an MCP client (Claude Code, Claude Desktop, etc.):
+## Install
+
+```bash
+uv sync --extra dev
+```
+
+`pylzt` and `lzt-testnet` are git dependencies (`tool.uv.sources` in `pyproject.toml`), both tracking `main` of `open-lzt/pylzt` and `open-lzt/lzt-testnet`. Without `--extra dev`, `lzt-testnet` isn't installed and `pytest -m e2e` won't collect.
+
+## Connecting an MCP client
+
+`.mcp.json` (or the Claude Desktop config) — `cwd` is the absolute path to this repository:
 
 ```json
 {
   "mcpServers": {
-    "lzt-dev-mcp": {
+    "lzt-mcp": {
       "command": "uv",
       "args": ["run", "python", "-m", "lzt_dev_mcp"],
       "cwd": "/absolute/path/to/lzt-mcp"
@@ -37,130 +35,113 @@ Register it with an MCP client (Claude Code, Claude Desktop, etc.):
 }
 ```
 
-## Testnet-default / prod-guard (read this before calling `send_request`)
-
-`send_request` defaults to `target="testnet"`. Calling it with `target="prod"` and no explicit,
-non-empty `token` argument **always** raises `ProdBlocked` — there is no environment-variable
-fallback, ever. Calling it with the default `target="testnet"` when no
-`LZT_DEV_MCP_TESTNET_BASE_URL` is configured raises `TestnetUnavailable` rather than silently
-falling through to prod. A real prod call requires an explicit token on that specific call, every
-time — no cached credential, no implicit default.
-
-## Configuration
-
-Env prefix `LZT_DEV_MCP_` (see `.env.example`):
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `TESTNET_BASE_URL` | unset | Where `send_request(target="testnet")` points — usually a running `lzt-testnet` instance |
-| `LZT_FLOW_BASE_URL` | `http://127.0.0.1:8000` | The `lzt-flow` REST API Group B talks to |
-| `LZT_FLOW_API_KEY` | unset | Auth for the `lzt-flow` REST API, if it requires one |
-| `LZT_EVENTUS_BASE_URL` | `http://127.0.0.1:8001` | The `lzt-eventus` REST API Group D talks to |
-| `LZT_EVENTUS_ADMIN_API_KEY` | unset | Admin key for `lzt-eventus`'s `/subscriptions`, `/tokens`, `/events` routes |
-
-## Examples
-
-Four ways to drive this server, matching its three tool groups plus the transport choice.
-
-### 1. Ask an agent to test a raw API method against testnet
-
-The intended default path — an AI dev-agent exploring the lzt.market API without touching prod
-or real money:
-
-```
-list_methods(search="lot")
-→ finds market_account_publishing.CreateLot, market.GetLot, ...
-
-get_method_schema("market.GetLot")
-→ {"fields": {"item_id": "int"}, "returning": "Lot"}
-
-send_request("market.GetLot", {"item_id": 123})
-→ hits target="testnet" (the default) — a real HTTP round-trip against the configured
-  lzt-testnet instance, zero risk to production
-```
-
-### 2. Drive a full `lzt-flow` scenario lifecycle over its REST API
-
-Use this to build/test flow automations without hand-rolling HTTP calls against `lzt-flow`:
-
-```python
-from lzt_dev_mcp.flow.tools import create_flow, compile_flow, create_run, get_run_trace
-
-flow = await create_flow({"name": "test-flow", "nodes": [...]})
-ir = await compile_flow(flow.flow_id)
-run = await create_run({"flow_id": flow.flow_id, "run_key": "manual-test-1"})
-trace = await get_run_trace(run.run_id)
-```
-
-### 3. Introspect the API surface instead of grepping `pylzt` source
-
-Use this when writing a new automation and you need the error/rate-limit shape without opening
-the SDK:
-
-```
-get_error_catalog()
-→ {"RateLimited": ["retry_after"], "AuthFailed": ["token_id"], "NotFound": ["item_id"], ...}
-
-get_rate_limits()
-→ {"general": "120/min", "search": "20/min"}
-```
-
-### 4. Run it over streamable HTTP instead of stdio
-
-Use this when the MCP client is a remote/web client rather than a local process manager:
+By default the server runs on the stdio transport (`scripts/run.sh` does the same). For streamable HTTP:
 
 ```bash
-uv run python -m lzt_dev_mcp --http --port 8765
+uv run python -m lzt_dev_mcp --http --host 127.0.0.1 --port 8770
 ```
-
-Same 21 tool definitions either way — stdio and HTTP are just two transports over one server.
 
 ## Tools
 
-### Group A — request testing (`lzt_dev_mcp.testing`)
-- `list_methods(namespace=None, search=None)` — list pylzt API methods, optionally filtered.
-- `get_method_schema(method_name)` — a method's declared request fields + response model name.
-- `get_model_schema(model_name)` — a response model's JSON Schema.
-- `send_request(method_name, params, target="testnet", token=None)` — send a real request.
-- `describe_api(query)` — free-text search over the method catalog.
+29 tools, registered in `server.py`, in four groups.
 
-### Group B — flow management (`lzt_dev_mcp.flow`)
-- `list_flows()` / `get_flow(flow_id)` / `create_flow(spec)` — flow CRUD (create/read only;
-  `lzt-flow` doesn't expose update/delete).
-- `export_flow(flow_id)` / `import_flow(envelope)` — versioned spec round-trip.
-- `compile_flow(flow_id)` — compile into an immutable FlowIR.
-- `list_catalog()` — `lzt-flow`'s node catalog (action/logic/trigger types).
-- `list_dynamic_methods(facade)` / `get_dynamic_method(facade, method)` — pylzt facade
-  methods usable as dynamic flow nodes.
-- `create_run(req)` — start a run (idempotent on `run_key`).
-- `list_runs()` / `get_run(run_id)` / `get_run_trace(run_id)` — poll run status/trace (no SSE
-  proxying in this MVP — poll instead of subscribing to `lzt-flow`'s live stream).
+### Request testing (`lzt_dev_mcp.testing`)
 
-### Group C — helpers (`lzt_dev_mcp.helpers`)
-- `get_rate_limits()` — published per-`RateClass` request ceilings.
-- `get_error_catalog()` — pylzt's typed error classes with their carried args.
-- `get_testnet_status()` — whether the configured `lzt-testnet` instance is reachable.
+| Tool | What it does |
+|---|---|
+| `list_methods(namespace=None, search=None)` | list pylzt API methods, filtered by namespace or search |
+| `get_method_schema(method_name)` | a method's request fields plus its response model name |
+| `get_model_schema(model_name)` | JSON Schema of a response model by name |
+| `send_request(method_name, params, target="testnet", token=None)` | a real request: testnet by default, prod guarded |
+| `describe_api(query)` | free-text search over the method catalog |
 
-### Group D — event/subscription management (`lzt_dev_mcp.eventus`)
-- `list_subscriptions()` / `create_subscription(spec)` — subscription CRUD (create/list; no
-  update/deactivate exposed here — out of MVP scope).
-- `poll_pending_events(subscription_id, event_type=None, limit=100)` / `confirm_read(subscription_id,
-  up_to_seq)` — pull events off a polling-transport subscription and commit read progress.
-- `get_event_types()` — `lzt-eventus`'s subscribable event-type catalog.
-- `register_token_account(spec)` / `list_token_accounts()` — token-account management.
-- `get_eventus_status()` — whether the configured `lzt-eventus` instance is reachable.
+### Flow (`lzt_dev_mcp.flow`)
 
-## Contributing
+| Tool | What it does |
+|---|---|
+| `list_flows()` | flows of the current tenant |
+| `get_flow(flow_id)` | a flow's full spec by id |
+| `create_flow(spec)` | create a flow from a FlowSpec |
+| `export_flow(flow_id)` | export a flow as a versioned FlowSpec envelope |
+| `import_flow(envelope)` | import from an exported envelope (gated on compile + dry-run) |
+| `compile_flow(flow_id)` | compile a flow into an immutable FlowIR |
+| `list_catalog()` | the lzt-flow node catalog (action/logic/trigger types) |
+| `list_dynamic_methods(facade)` | pylzt facade methods usable as dynamic flow nodes |
+| `get_dynamic_method(facade, method)` | one dynamic method's params and return shape |
+| `create_run(req)` | start a run of a compiled flow (idempotent on `run_key`) |
+| `list_runs()` | runs of the current tenant |
+| `get_run(run_id)` | a run's current status |
+| `get_run_trace(run_id)` | a run's per-node execution trace |
 
-Local dev, no CI configured yet:
+### Helpers (`lzt_dev_mcp.helpers`)
+
+| Tool | What it does |
+|---|---|
+| `get_rate_limits()` | published per-`RateClass` request ceilings |
+| `get_error_catalog()` | pylzt's typed error classes with their carried args |
+| `get_testnet_status()` | whether the configured lzt-testnet instance is reachable |
+
+### Events (`lzt_dev_mcp.eventus`)
+
+| Tool | What it does |
+|---|---|
+| `list_subscriptions()` | lzt-eventus subscriptions (admin-key gated) |
+| `create_subscription(spec)` | a new subscription (webhook/websocket/sse/polling) |
+| `poll_pending_events(subscription_id, event_type=None, limit=100)` | poll pending events for a polling-transport subscription |
+| `confirm_read(subscription_id, up_to_seq)` | commit read progress up to a seq |
+| `get_event_types()` | the subscribable event-type catalog |
+| `register_token_account(spec)` | register an lzt-eventus token account |
+| `list_token_accounts()` | token accounts (admin-key gated) |
+| `get_eventus_status()` | whether the configured lzt-eventus instance is reachable |
+
+The CRUD in the Flow and Events groups is incomplete on purpose: `lzt-flow` and `lzt-eventus` don't offer update/delete for flows and subscriptions themselves. These tools mirror their REST APIs one-to-one and add nothing on top.
+
+## The prod guard
+
+`send_request(target="prod")` without an explicit non-empty `token` always raises `ProdBlocked` (`errors.py`). There is no environment-variable fallback and there won't be one: `config.py` deliberately has no `allow_prod` setting, so there is no second, weaker answer to the same question. The prod client is built in `client_factory.build_client`:
+
+```python
+if target == "prod":
+    if not token:
+        raise ProdBlocked()
+    return Client([token])
+```
+
+`target="testnet"` (the default) with no `LZT_DEV_MCP_TESTNET_BASE_URL` configured raises `TestnetUnavailable` rather than quietly falling through to prod.
+
+## Configuration
+
+Environment variables with the `LZT_DEV_MCP_` prefix (`config.py`, `Settings`):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `LZT_DEV_MCP_TESTNET_BASE_URL` | unset | where `send_request(target="testnet")` and `get_testnet_status()` point |
+| `LZT_DEV_MCP_LZT_FLOW_BASE_URL` | `http://127.0.0.1:8000` | the `lzt-flow` REST API for the Flow group |
+| `LZT_DEV_MCP_LZT_FLOW_API_KEY` | unset | `X-API-Key` for mutating `lzt-flow` routes (`compile_flow`, `create_run`, `create_flow`, `import_flow`) |
+| `LZT_DEV_MCP_LZT_EVENTUS_BASE_URL` | `http://127.0.0.1:27543` | the `lzt-eventus` REST API for the Events group |
+| `LZT_DEV_MCP_LZT_EVENTUS_ADMIN_API_KEY` | unset | admin key for `lzt-eventus` routes: subscriptions, token accounts |
+
+The repo's `.env.example` sets only the first three — `lzt-eventus` works on its default `base_url` without a key until you need the admin routes.
+
+## Development
 
 ```bash
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy --strict src
-uv run pytest -q              # unit tests only (e2e skipped by default)
-uv run pytest -m e2e -q       # needs a running lzt-testnet + lzt-flow instance
+uv run mypy src
+uv run pytest -q              # unit tests; e2e is skipped (the `e2e` marker in pyproject.toml)
+uv run pytest -m e2e -q       # needs a running lzt-testnet and an lzt-flow dev instance
 ```
+
+`.github/workflows/ci.yml` runs the same set (ruff check, ruff format --check, mypy, pytest) on every push to `main` and every PR.
+
+## Ecosystem
+
+- [pylzt](https://github.com/open-lzt/pylzt)
+- [auto-lzt](https://github.com/open-lzt/auto-lzt)
+- [lzt-eventus](https://github.com/open-lzt/lzt-eventus)
+- [lzt-testnet](https://github.com/open-lzt/lzt-testnet)
+- [open-lzt](https://github.com/open-lzt/open-lzt)
 
 ## License
 
